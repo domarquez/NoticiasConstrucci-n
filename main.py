@@ -5,24 +5,22 @@ from urllib.parse import urljoin
 import schedule
 import time
 from datetime import datetime
-import re  # Para filtrar noticias relevantes
+import re
+import os
+from urllib.parse import urlparse, parse_qs
 
-# Parámetros de conexión a Neon
-DB_HOST = "tu-host-neon.neon.tech"
-DB_NAME = "news_db"
-DB_USER = "tu-usuario"
-DB_PASSWORD = "tu-contraseña"
-DB_PORT = "5432"
+# Obtener la cadena de conexión desde la variable de entorno
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Lista de fuentes bolivianas con énfasis en Santa Cruz
+# Fuentes bolivianas con énfasis en Santa Cruz
 FUENTES = [
     {
         "nombre": "El Deber",
         "url": "https://eldeber.com.bo/santa-cruz",
-        "selector_titular": "h3.title, h2.headline",
-        "selector_resumen": "p.summary, .excerpt",
-        "selector_imagen": "img.article-image, .featured-image img",
-        "selector_enlace": "a.article-link, h3 a"
+        "selector_titular": "h3.teaser-title, h2.headline",
+        "selector_resumen": "p.teaser-text, .excerpt",
+        "selector_imagen": "img.teaser-image, .featured-image img",
+        "selector_enlace": "a.teaser-link, h3 a"
     },
     {
         "nombre": "El Día",
@@ -56,28 +54,21 @@ FUENTES = [
         "selector_imagen": "img.article-img",
         "selector_enlace": "a.read-more"
     },
-    # Agrega más: Unitel, GMS, etc., con sus selectores
 ]
 
-# Palabras clave para filtrar noticias relevantes (Bolivia/Santa Cruz)
-PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Santa Cruz", "Bolivia", "obra", "proyecto", "urbanismo"]
+# Palabras clave para filtrar noticias relevantes
+PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Santa Cruz", "Bolivia", "obra", "proyecto", "urbanismo", "Urubó", "vial"]
 
-# Conexión a la base de datos Neon
+# Conexión a Neon usando DATABASE_URL
 def conectar_db():
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
+        conn = psycopg2.connect(DATABASE_URL)
         return conn
     except Exception as e:
         print(f"Error al conectar a la base de datos: {e}")
         return None
 
-# Crear tabla si no existe (con filtro para Santa Cruz/Bolivia)
+# Crear tabla si no existe
 def crear_tabla():
     conn = conectar_db()
     if conn:
@@ -109,7 +100,8 @@ def es_relevante(texto):
 # Extraer noticias de una fuente
 def extraer_fuente(fuente):
     try:
-        response = requests.get(fuente["url"], timeout=10)
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        response = requests.get(fuente["url"], headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -118,7 +110,7 @@ def extraer_fuente(fuente):
         for item in items:
             titular = item.get_text(strip=True)
             if not es_relevante(titular):
-                continue  # Saltar si no es relevante
+                continue
             elemento_articulo = item.find_parent("article") or item
             resumen_elem = elemento_articulo.select_one(fuente["selector_resumen"])
             resumen = resumen_elem.get_text(strip=True) if resumen_elem else ""
@@ -131,7 +123,7 @@ def extraer_fuente(fuente):
 
             articulos.append({
                 "titular": titular,
-                "resumen": resumen[:200] + "..." if len(resumen) > 200 else resumen,  # Resumen corto
+                "resumen": resumen[:200] + "..." if len(resumen) > 200 else resumen,
                 "url_imagen": url_imagen,
                 "enlace": enlace,
                 "fuente": fuente["nombre"],
