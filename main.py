@@ -15,39 +15,39 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(m
 # Obtener la cadena de conexión desde la variable de entorno
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fuentes bolivianas con énfasis en Santa Cruz (selectores revisados)
+# Fuentes bolivianas con énfasis en Santa Cruz (selectores ajustados basados en análisis HTML)
 FUENTES = [
     {
         "nombre": "El Deber",
         "url": "https://eldeber.com.bo/santa-cruz",
-        "selector_titular": "h3.teaser-title, h2.headline, .article-title",
-        "selector_resumen": "p.teaser-text, p.summary, .article-excerpt",
-        "selector_imagen": "img.teaser-image, img.featured-image, img.article-image",
-        "selector_enlace": "a.teaser-link, h3 a, a.article-link"
+        "selector_titular": "h3.article-title, h2.headline, .article-title",
+        "selector_resumen": "p.article-summary, p.summary, .article-excerpt",
+        "selector_imagen": "img.article-image, img.featured-image, .article-thumb img",
+        "selector_enlace": "a.article-link, h3 a, a[href*='/santa-cruz/']"
     },
     {
         "nombre": "El Día",
         "url": "https://www.eldia.com.bo/",
-        "selector_titular": "h2.entry-title, h3.post-title, .post-title",
-        "selector_resumen": "p.entry-summary, p.description, .excerpt",
-        "selector_imagen": "img.post-thumbnail, img.wp-post-image, .featured-image img",
-        "selector_enlace": "a.post-url, h2 a, .read-more"
+        "selector_titular": "h3.article-title, h2.entry-title, .post-title",
+        "selector_resumen": "p.article-summary, p.entry-summary, .description",
+        "selector_imagen": "img.post-thumbnail, img.wp-post-image, .article-image",
+        "selector_enlace": "a.article-link, h3 a, a[href*='/YYYY-MM-DD/']"
     },
     {
         "nombre": "Cadecocruz",
         "url": "https://cadecocruz.org.bo/index.php?pg2=210",
-        "selector_titular": "h2.news-title, h3.article-title, .title",
+        "selector_titular": "h4, h3.news-title, .title",
         "selector_resumen": "p.news-summary, p.article-excerpt, .summary",
         "selector_imagen": "img.news-img, img.article-image, .featured-img",
-        "selector_enlace": "a.news-link, a.article-link, a.read-more"
+        "selector_enlace": "a.news-link, a[href*='?op=51&nw='], a.article-link"
     },
     {
         "nombre": "Contacto Construcción",
         "url": "https://contactoconstruccion.com/",
-        "selector_titular": "h2.post-title, h2.entry-title, .article-title",
-        "selector_resumen": "p.post-excerpt, p.entry-summary, .excerpt",
+        "selector_titular": "h4 a, h2.post-title, .article-title",
+        "selector_resumen": "h4 + p, p.post-excerpt, .entry-summary",
         "selector_imagen": "img.post-thumbnail, img.featured, .article-image",
-        "selector_enlace": "a.post-url, a.read-more, .article-link"
+        "selector_enlace": "h4 a, a.post-url, a[href*='contactoconstruccion.com/']"
     },
     {
         "nombre": "Urgente.bo",
@@ -55,7 +55,7 @@ FUENTES = [
         "selector_titular": "h3.article-title, h2.news-title, .title",
         "selector_resumen": "p.article-summary, p.excerpt, .summary",
         "selector_imagen": "img.article-img, img.news-image, .featured-img",
-        "selector_enlace": "a.read-more, a.article-link, h3 a"
+        "selector_enlace": "a.article-link, h3 a, a[href*='/noticia/']"
     },
 ]
 
@@ -109,7 +109,7 @@ def extraer_fuente(fuente):
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         logging.info(f"Iniciando solicitud a {fuente['url']}")
-        response = requests.get(fuente["url"], headers=headers, timeout=15)  # Aumentar timeout
+        response = requests.get(fuente["url"], headers=headers, timeout=15)
         response.raise_for_status()
         logging.info(f"Solicitud exitosa a {fuente['url']} - Estado: {response.status_code}")
         soup = BeautifulSoup(response.text, "html.parser")
@@ -121,13 +121,13 @@ def extraer_fuente(fuente):
             logging.warning(f"No se encontraron elementos con {fuente['selector_titular']} en {fuente['url']}")
             return []
 
-        for item in items[:5]:  # Limitar a 5 por fuente
+        for item in items[:5]:
             titular = item.get_text(strip=True)
             logging.debug(f"Titular crudo: '{titular}'")
             if not es_relevante(titular):
                 logging.debug(f"Titular descartado por relevancia: '{titular}'")
                 continue
-            elemento_articulo = item.find_parent("article") or item.find_parent("div", class_=re.compile("article|post|news"))
+            elemento_articulo = item.find_parent("article") or item.find_parent("div", class_=re.compile("article|post|news|teaser|item"))
             if not elemento_articulo:
                 logging.warning(f"No se encontró elemento padre para titular: '{titular}'")
                 continue
@@ -139,7 +139,7 @@ def extraer_fuente(fuente):
                 continue
             imagen = elemento_articulo.select_one(fuente["selector_imagen"])
             url_imagen = urljoin(fuente["url"], imagen["src"]) if imagen and imagen.get("src") else ""
-            enlace_elem = elemento_articulo.select_one(fuente["selector_enlace"])
+            enlace_elem = elemento_articulo.select_one(fuente["selector_enlace"]) or item.find("a")
             enlace = urljoin(fuente["url"], enlace_elem["href"]) if enlace_elem and enlace_elem.get("href") else ""
             logging.debug(f"Enlace generado: '{enlace}'")
             if not enlace:
@@ -163,55 +163,11 @@ def extraer_fuente(fuente):
         logging.error(f"Error inesperado al extraer de {fuente['nombre']}: {e}")
         return []
 
-# Guardar artículos en la base de datos (con depuración)
+# Guardar artículos en la base de datos
 def guardar_en_db(articulos):
     conn = conectar_db()
     if conn:
         try:
             cursor = conn.cursor()
             for articulo in articulos:
-                logging.debug(f"Intentando guardar: {articulo['titular']} - {articulo['enlace']}")
-                cursor.execute("""
-                    INSERT INTO noticias_construccion_bolivia (titular, resumen, url_imagen, enlace, fuente, fecha_publicacion)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (enlace) DO NOTHING;
-                """, (
-                    articulo["titular"],
-                    articulo["resumen"],
-                    articulo["url_imagen"],
-                    articulo["enlace"],
-                    articulo["fuente"],
-                    articulo["fecha_publicacion"]
-                ))
-            conn.commit()
-            logging.info(f"Guardados {len(articulos)} artículos en la base de datos")
-            cursor.close()
-        except Exception as e:
-            logging.error(f"Error al guardar en la base de datos: {e}")
-        finally:
-            conn.close()
-
-# Extraer todas las fuentes
-def extraer_todas_las_fuentes():
-    crear_tabla()
-    todos_articulos = []
-    for fuente in FUENTES:
-        articulos = extraer_fuente(fuente)
-        todos_articulos.extend(articulos)
-    guardar_en_db(todos_articulos)
-    logging.info(f"Total guardados: {len(todos_articulos)} noticias sobre Bolivia/Santa Cruz")
-
-# Programar ejecución diaria y forzar ejecución inmediata
-schedule.every().day.at("08:00").do(extraer_todas_las_fuentes)
-
-# Ejecutar el scheduler con reinicio forzado
-def main():
-    logging.info("Iniciando agregador de noticias bolivianas (énfasis Santa Cruz)...")
-    logging.info("Ejecutando extracción inmediata para depuración...")
-    extraer_todas_las_fuentes()  # Forzar ejecución ahora
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-if __name__ == "__main__":
-    main()
+                logging.debug(f"Intentando guardar: {articulo['
