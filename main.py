@@ -15,52 +15,68 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(m
 # Obtener la cadena de conexión desde la variable de entorno
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fuentes bolivianas con énfasis en Santa Cruz (selectores actualizados)
+# Fuentes ampliadas para toda Bolivia
 FUENTES = [
-    {
-        "nombre": "El Deber",
-        "url": "https://eldeber.com.bo/santa-cruz",
-        "selector_titular": "h3.article-title, h2.headline, .article-title, h2 a, h3 a",
-        "selector_resumen": "p.article-summary, p.summary, .article-excerpt, p",
-        "selector_imagen": "img.article-image, img.featured-image, .article-thumb img, img",
-        "selector_enlace": "a.article-link, h3 a, a[href*='/santa-cruz/']"
-    },
-    {
-        "nombre": "El Día",
-        "url": "https://www.eldia.com.bo/",
-        "selector_titular": "a[href*='/YYYY-MM-DD/'], h2 a, h3 a, .news-title a, h3",
-        "selector_resumen": "p.article-summary, p.entry-summary, .description, p",
-        "selector_imagen": "img.post-thumbnail, img.wp-post-image, .article-image, img",
-        "selector_enlace": "a[href^='https://www.eldia.com.bo/'], .read-more, h2 a[href*='/categoria/']"
-    },
-    {
-        "nombre": "Cadecocruz",
-        "url": "https://cadecocruz.org.bo/index.php?pg2=210",
-        "selector_titular": "h3, h4, .title",
-        "selector_resumen": "p, .summary",
-        "selector_imagen": "img, .featured-img",
-        "selector_enlace": "a[href*='op=51&nw='], a.news-link, a.article-link"
-    },
     {
         "nombre": "Contacto Construcción",
         "url": "https://contactoconstruccion.com/",
-        "selector_titular": "h4 a, h2.post-title, .article-title, h4",
-        "selector_resumen": "h4 + p, p.post-excerpt, .entry-summary, p",
-        "selector_imagen": "img.post-thumbnail, img.featured, .article-image, img",
+        "selector_titular": "h4 a, h2.post-title, .article-title",
+        "selector_resumen": "h4 + p, p.post-excerpt, .entry-summary",
+        "selector_imagen": "img.post-thumbnail, img.featured, .article-image",
         "selector_enlace": "h4 a, a.post-url, a[href*='contactoconstruccion.com/']"
     },
     {
-        "nombre": "Urgente.bo",
-        "url": "https://www.urgente.bo/",
-        "selector_titular": "h3.article-title, h2.news-title, .title, h3 a",
-        "selector_resumen": "p.article-summary, p.excerpt, .summary, p",
-        "selector_imagen": "img.article-img, img.news-image, .featured-img, img",
-        "selector_enlace": "a.article-link, h3 a, a[href*='/noticia/']"
+        "nombre": "El Deber",
+        "url": "https://eldeber.com.bo/economia",
+        "selector_titular": "h3.article-title, h2.headline, .article-title, h2 a, h3 a",
+        "selector_resumen": "p.article-summary, p.summary, .article-excerpt, p",
+        "selector_imagen": "img.article-image, img.featured-image, .article-thumb img, img",
+        "selector_enlace": "a.article-link, h3 a, a[href*='/economia/']"
+    },
+    {
+        "nombre": "Los Tiempos",
+        "url": "https://www.lostiempos.com/seccion/economia/1",
+        "selector_titular": "h3 a, .article-title, h2 a",
+        "selector_resumen": "p.summary, .excerpt, p",
+        "selector_imagen": "img.article-image, img.featured, .thumb img",
+        "selector_enlace": "a.article-link, h3 a, a[href*='/actualidad/economia/']"
+    },
+    {
+        "nombre": "Opinión",
+        "url": "https://www.opinion.com.bo/seccion/economia/1",
+        "selector_titular": "h3 a, .title a, h2 a",
+        "selector_resumen": "p.excerpt, .summary, p",
+        "selector_imagen": "img.featured, .thumb img, img",
+        "selector_enlace": "a[href*='/articulo/economia/'], h3 a"
+    },
+    {
+        "nombre": "El País Bolivia",
+        "url": "https://elpais.bo/economia/",
+        "selector_titular": "h2.headline, h3 a, .article-title",
+        "selector_resumen": "p.description, .summary, p",
+        "selector_imagen": "img.photo, .featured-image img, img",
+        "selector_enlace": "a.link, h2 a, a[href*='/economia/']"
+    },
+    {
+        "nombre": "OOPP.gob.bo",
+        "url": "https://www.oopp.gob.bo/noticias",
+        "selector_titular": "h3, .noticia-title, h2 a",
+        "selector_resumen": "p, .noticia-summary",
+        "selector_imagen": "img.noticia-img, .featured-img, img",
+        "selector_enlace": "a.noticia-link, h3 a, a[href*='/nota_prensa/']"
+    },
+    {
+        "nombre": "Noticias Fides (ANF)",
+        "url": "https://www.noticiasfides.com/economia",
+        "selector_titular": "h3.article-title, h2.headline, .title a",
+        "selector_resumen": "p.summary, .excerpt, p",
+        "selector_imagen": "img.article-image, img.featured, .thumb img",
+        "selector_enlace": "a.article-link, h3 a, a[href*='/economia/']"
     },
 ]
 
-# Palabras clave para filtrar noticias relevantes (relajadas para pruebas)
-PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Santa Cruz", "Bolivia", "obra", "proyecto", "urbanismo", "Urubó", "vial", "noticia", "santa", "cruz", "seguridad", "innovación", "liderazgo", "proyectos"]
+# Palabras clave para noticias nacionales
+PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Bolivia", "obra", "proyecto", "urbanismo", "vial", "noticia", "nacional", "gobierno", "inversión", "sostenibilidad", "cemento", "inmobiliario"]
 
 # Conexión a Neon
 def conectar_db():
@@ -97,14 +113,14 @@ def crear_tabla():
         finally:
             conn.close()
 
-# Filtrar artículo por relevancia (con depuración)
+# Filtrar artículo por relevancia
 def es_relevante(texto):
     texto_lower = texto.lower() if texto else ""
-    relevante = any(palabra.lower() in texto_lower for palabra in PALABRAS_CLAVE) or not texto  # Relaja el filtro temporalmente
+    relevante = any(palabra.lower() in texto_lower for palabra in PALABRAS_CLAVE) or not texto
     logging.debug(f"Texto: '{texto}' - Relevante: {relevante} - Palabras clave: {PALABRAS_CLAVE}")
     return relevante
 
-# Extraer noticias de una fuente (con depuración)
+# Extraer noticias de una fuente
 def extraer_fuente(fuente):
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
