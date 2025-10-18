@@ -100,8 +100,118 @@ def crear_tabla():
 # Filtrar artículo por relevancia (con depuración avanzada)
 def es_relevante(texto):
     texto_lower = texto.lower() if texto else ""
-    relevante = any(palabra.lower() in texto_lower for palabra in PALABRAS_CLAVE) or not texto  # Temporalmente relaja el filtro
+    relevante = any(palabra.lower() in texto_lower for palabra in PALABRAS_CLAVE) or not texto  # Relaja el filtro temporalmente
     logging.debug(f"Texto: '{texto}' - Relevante: {relevante} - Palabras clave: {PALABRAS_CLAVE}")
     return relevante
 
-# Extraer noticias de una fuente (con depuración
+# Extraer noticias de una fuente (con depuración avanzada)
+def extraer_fuente(fuente):
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        logging.info(f"Iniciando solicitud a {fuente['url']}")
+        response = requests.get(fuente["url"], headers=headers, timeout=15)  # Aumentar timeout
+        response.raise_for_status()
+        logging.info(f"Solicitud exitosa a {fuente['url']} - Estado: {response.status_code}")
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        articulos = []
+        items = soup.select(fuente["selector_titular"])
+        logging.info(f"Elementos encontrados con {fuente['selector_titular']}: {len(items)}")
+        if not items:
+            logging.warning(f"No se encontraron elementos con {fuente['selector_titular']} en {fuente['url']}")
+            return []
+
+        for item in items[:5]:  # Limitar a 5 por fuente
+            titular = item.get_text(strip=True)
+            logging.debug(f"Titular crudo: '{titular}'")
+            if not es_relevante(titular):
+                logging.debug(f"Titular descartado por relevancia: '{titular}'")
+                continue
+            elemento_articulo = item.find_parent("article") or item.find_parent("div", class_=re.compile("article|post|news"))
+            if not elemento_articulo:
+                logging.warning(f"No se encontró elemento padre para titular: '{titular}'")
+                continue
+            resumen_elem = elemento_articulo.select_one(fuente["selector_resumen"])
+            resumen = resumen_elem.get_text(strip=True) if resumen_elem else ""
+            logging.debug(f"Resumen crudo: '{resumen}'")
+            if not es_relevante(resumen):
+                logging.debug(f"Resumen descartado por relevancia: '{resumen}'")
+                continue
+            imagen = elemento_articulo.select_one(fuente["selector_imagen"])
+            url_imagen = urljoin(fuente["url"], imagen["src"]) if imagen and imagen.get("src") else ""
+            enlace_elem = elemento_articulo.select_one(fuente["selector_enlace"])
+            enlace = urljoin(fuente["url"], enlace_elem["href"]) if enlace_elem and enlace_elem.get("href") else ""
+            logging.debug(f"Enlace generado: '{enlace}'")
+            if not enlace:
+                logging.warning(f"Enlace inválido para titular: '{titular}'")
+                continue
+
+            articulos.append({
+                "titular": titular,
+                "resumen": resumen[:200] + "..." if len(resumen) > 200 else resumen,
+                "url_imagen": url_imagen,
+                "enlace": enlace,
+                "fuente": fuente["nombre"],
+                "fecha_publicacion": datetime.now()
+            })
+        logging.info(f"Extraídos {len(articulos)} artículos de {fuente['nombre']}")
+        return articulos
+    except requests.RequestException as e:
+        logging.error(f"Error de red al extraer de {fuente['nombre']}: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Error inesperado al extraer de {fuente['nombre']}: {e}")
+        return []
+
+# Guardar artículos en la base de datos (con depuración)
+def guardar_en_db(articulos):
+    conn = conectar_db()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            for articulo in articulos:
+                logging.debug(f"Intentando guardar: {articulo['titular']} - {articulo['enlace']}")
+                cursor.execute("""
+                    INSERT INTO noticias_construccion_bolivia (titular, resumen, url_imagen, enlace, fuente, fecha_publicacion)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (enlace) DO NOTHING;
+                """, (
+                    articulo["titular"],
+                    articulo["resumen"],
+                    articulo["url_imagen"],
+                    articulo["enlace"],
+                    articulo["fuente"],
+                    articulo["fecha_publicacion"]
+                ))
+            conn.commit()
+            logging.info(f"Guardados {len(articulos)} artículos en la base de datos")
+            cursor.close()
+        except Exception as e:
+            logging.error(f"Error al guardar en la base de datos: {e}")
+        finally:
+            conn.close()
+
+# Extraer todas las fuentes
+def extraer_todas_las_fuentes():
+    crear_tabla()
+    todos_articulos = []
+    for fuente in FUENTES:
+        articulos = extraer_fuente(fuente)
+        todos_articulos.extend(articulos)
+    guardar_en_db(todos_articulos)
+    logging.info(f"Total guardados: {len(todos_articulos)} noticias sobre Bolivia/Santa Cruz")
+
+# Programar ejecución diaria y forzar ejecución inmediata
+schedule.every().day.at("08:00").do(extraer_todas_las_fuentes)
+
+# Ejecutar el scheduler con reinicio forzado
+def main():
+    logging.info("Iniciando agregador de noticias bolivianas (énfasis Santa Cruz)...")
+    logging.info("Ejecutando extracción inmediata para depuración...")
+    extraer_todas_las_fuentes()  # Forzar ejecución ahora
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
