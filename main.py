@@ -59,7 +59,7 @@ FUENTES = [
     },
     {
         "nombre": "OOPP.gob.bo",
-        "url": "https://www.oopp.gob.bo/noticias",
+        "url": "https://www.oopp.gob.bo/notas-de-prensa/",
         "selector_titular": "h3, .noticia-title, h2 a",
         "selector_resumen": "p, .noticia-summary",
         "selector_imagen": "img.noticia-img, .featured-img, img",
@@ -73,10 +73,18 @@ FUENTES = [
         "selector_imagen": "img.article-image, img.featured, .thumb img",
         "selector_enlace": "a.article-link, h3 a, a[href*='/economia/']"
     },
+    {
+        "nombre": "BNamericas",
+        "url": "https://www.bnamericas.com/en/news/infrastructure?country=Bolivia",
+        "selector_titular": "h2.title, h3 a, .news-title",
+        "selector_resumen": "p.summary, .excerpt, p",
+        "selector_imagen": "img.news-img, .featured, img",
+        "selector_enlace": "a.news-link, h2 a, a[href*='/news/infrastructure']"
+    },
 ]
 
 # Palabras clave para noticias nacionales
-PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Bolivia", "obra", "proyecto", "urbanismo", "vial", "noticia", "nacional", "gobierno", "inversión", "sostenibilidad", "cemento", "inmobiliario"]
+PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Bolivia", "obra", "proyecto", "urbanismo", "vial", "noticia", "nacional", "gobierno", "inversión", "sostenibilidad", "cemento", "inmobiliario", "licitación", "túnel", "carretera"]
 
 # Conexión a Neon
 def conectar_db():
