@@ -15,52 +15,52 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(m
 # Obtener la cadena de conexión desde la variable de entorno
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fuentes bolivianas con énfasis en Santa Cruz (selectores actualizados basados en análisis HTML)
+# Fuentes bolivianas con énfasis en Santa Cruz (selectores actualizados)
 FUENTES = [
     {
         "nombre": "El Deber",
         "url": "https://eldeber.com.bo/santa-cruz",
-        "selector_titular": "h3.article-title, h2.headline, .article-title",
-        "selector_resumen": "p.article-summary, p.summary, .article-excerpt",
-        "selector_imagen": "img.article-image, img.featured-image, .article-thumb img",
+        "selector_titular": "h3.article-title, h2.headline, .article-title, h2 a, h3 a",
+        "selector_resumen": "p.article-summary, p.summary, .article-excerpt, p",
+        "selector_imagen": "img.article-image, img.featured-image, .article-thumb img, img",
         "selector_enlace": "a.article-link, h3 a, a[href*='/santa-cruz/']"
     },
     {
         "nombre": "El Día",
         "url": "https://www.eldia.com.bo/",
-        "selector_titular": "a[href*='/YYYY-MM-DD/'], h2 a, h3 a, .news-title a",
-        "selector_resumen": "p, .article-summary, article p:first-of-type",
-        "selector_imagen": "img, .news-image, article img",
+        "selector_titular": "a[href*='/YYYY-MM-DD/'], h2 a, h3 a, .news-title a, h3",
+        "selector_resumen": "p.article-summary, p.entry-summary, .description, p",
+        "selector_imagen": "img.post-thumbnail, img.wp-post-image, .article-image, img",
         "selector_enlace": "a[href^='https://www.eldia.com.bo/'], .read-more, h2 a[href*='/categoria/']"
     },
     {
         "nombre": "Cadecocruz",
         "url": "https://cadecocruz.org.bo/index.php?pg2=210",
-        "selector_titular": "h4, h3.news-title, .title",
-        "selector_resumen": "p.news-summary, p.article-excerpt, .summary",
-        "selector_imagen": "img.news-img, img.article-image, .featured-img",
-        "selector_enlace": "a[href*='op=51&nw='], .noticias a, h4 a"
+        "selector_titular": "h3, h4, .title",
+        "selector_resumen": "p, .summary",
+        "selector_imagen": "img, .featured-img",
+        "selector_enlace": "a[href*='op=51&nw='], a.news-link, a.article-link"
     },
     {
         "nombre": "Contacto Construcción",
         "url": "https://contactoconstruccion.com/",
-        "selector_titular": "h4 a, h2.post-title, .article-title",
-        "selector_resumen": "h4 + p, p.post-excerpt, .entry-summary",
-        "selector_imagen": "img.post-thumbnail, img.featured, .article-image",
+        "selector_titular": "h4 a, h2.post-title, .article-title, h4",
+        "selector_resumen": "h4 + p, p.post-excerpt, .entry-summary, p",
+        "selector_imagen": "img.post-thumbnail, img.featured, .article-image, img",
         "selector_enlace": "h4 a, a.post-url, a[href*='contactoconstruccion.com/']"
     },
     {
         "nombre": "Urgente.bo",
         "url": "https://www.urgente.bo/",
-        "selector_titular": "h3.article-title, h2.news-title, .title",
-        "selector_resumen": "p.article-summary, p.excerpt, .summary",
-        "selector_imagen": "img.article-img, img.news-image, .featured-img",
+        "selector_titular": "h3.article-title, h2.news-title, .title, h3 a",
+        "selector_resumen": "p.article-summary, p.excerpt, .summary, p",
+        "selector_imagen": "img.article-img, img.news-image, .featured-img, img",
         "selector_enlace": "a.article-link, h3 a, a[href*='/noticia/']"
     },
 ]
 
 # Palabras clave para filtrar noticias relevantes (relajadas para pruebas)
-PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Santa Cruz", "Bolivia", "obra", "proyecto", "urbanismo", "Urubó", "vial", "noticia", "santa", "cruz"]
+PALABRAS_CLAVE = ["construcción", "ingeniería", "infraestructura", "Santa Cruz", "Bolivia", "obra", "proyecto", "urbanismo", "Urubó", "vial", "noticia", "santa", "cruz", "seguridad", "innovación", "liderazgo", "proyectos"]
 
 # Conexión a Neon
 def conectar_db():
