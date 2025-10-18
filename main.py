@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(m
 # Obtener la cadena de conexión desde la variable de entorno
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fuentes bolivianas con énfasis en Santa Cruz (selectores ajustados basados en análisis HTML)
+# Fuentes bolivianas con énfasis en Santa Cruz (selectores actualizados basados en análisis HTML)
 FUENTES = [
     {
         "nombre": "El Deber",
@@ -28,10 +28,10 @@ FUENTES = [
     {
         "nombre": "El Día",
         "url": "https://www.eldia.com.bo/",
-        "selector_titular": "h3.article-title, h2.entry-title, .post-title",
-        "selector_resumen": "p.article-summary, p.entry-summary, .description",
-        "selector_imagen": "img.post-thumbnail, img.wp-post-image, .article-image",
-        "selector_enlace": "a.article-link, h3 a, a[href*='/YYYY-MM-DD/']"
+        "selector_titular": "a[href*='/YYYY-MM-DD/'], h2 a, h3 a, .news-title a",
+        "selector_resumen": "p, .article-summary, article p:first-of-type",
+        "selector_imagen": "img, .news-image, article img",
+        "selector_enlace": "a[href^='https://www.eldia.com.bo/'], .read-more, h2 a[href*='/categoria/']"
     },
     {
         "nombre": "Cadecocruz",
@@ -39,7 +39,7 @@ FUENTES = [
         "selector_titular": "h4, h3.news-title, .title",
         "selector_resumen": "p.news-summary, p.article-excerpt, .summary",
         "selector_imagen": "img.news-img, img.article-image, .featured-img",
-        "selector_enlace": "a.news-link, a[href*='?op=51&nw='], a.article-link"
+        "selector_enlace": "a[href*='op=51&nw='], .noticias a, h4 a"
     },
     {
         "nombre": "Contacto Construcción",
@@ -97,14 +97,14 @@ def crear_tabla():
         finally:
             conn.close()
 
-# Filtrar artículo por relevancia (con depuración avanzada)
+# Filtrar artículo por relevancia (con depuración)
 def es_relevante(texto):
     texto_lower = texto.lower() if texto else ""
     relevante = any(palabra.lower() in texto_lower for palabra in PALABRAS_CLAVE) or not texto  # Relaja el filtro temporalmente
     logging.debug(f"Texto: '{texto}' - Relevante: {relevante} - Palabras clave: {PALABRAS_CLAVE}")
     return relevante
 
-# Extraer noticias de una fuente (con depuración avanzada)
+# Extraer noticias de una fuente (con depuración)
 def extraer_fuente(fuente):
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -170,4 +170,47 @@ def guardar_en_db(articulos):
         try:
             cursor = conn.cursor()
             for articulo in articulos:
-                logging.debug(f"Intentando guardar: {articulo['
+                logging.debug(f"Intentando guardar: {articulo['titular']} - {articulo['enlace']}")
+                cursor.execute("""
+                    INSERT INTO noticias_construccion_bolivia (titular, resumen, url_imagen, enlace, fuente, fecha_publicacion)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (enlace) DO NOTHING;
+                """, (
+                    articulo["titular"],
+                    articulo["resumen"],
+                    articulo["url_imagen"],
+                    articulo["enlace"],
+                    articulo["fuente"],
+                    articulo["fecha_publicacion"]
+                ))
+            conn.commit()
+            logging.info(f"Guardados {len(articulos)} artículos en la base de datos")
+            cursor.close()
+        except Exception as e:
+            logging.error(f"Error al guardar en la base de datos: {e}")
+        finally:
+            conn.close()
+
+# Extraer todas las fuentes
+def extraer_todas_las_fuentes():
+    crear_tabla()
+    todos_articulos = []
+    for fuente in FUENTES:
+        articulos = extraer_fuente(fuente)
+        todos_articulos.extend(articulos)
+    guardar_en_db(todos_articulos)
+    logging.info(f"Total guardados: {len(todos_articulos)} noticias sobre Bolivia/Santa Cruz")
+
+# Programar ejecución diaria
+schedule.every().day.at("08:00").do(extraer_todas_las_fuentes)
+
+# Ejecutar el scheduler
+def main():
+    logging.info("Iniciando agregador de noticias bolivianas (énfasis Santa Cruz)...")
+    extraer_todas_las_fuentes()  # Ejecutar inmediatamente para pruebas
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
