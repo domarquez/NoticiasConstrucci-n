@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import psycopg2
 from urllib.parse import urljoin
+import schedule
+import time
 from datetime import datetime
 import re
 import os
@@ -213,7 +215,7 @@ def guardar_en_db(articulos):
         finally:
             conn.close()
 
-# Extraer todas las fuentes (ejecuta una vez y termina)
+# Extraer todas las fuentes
 def extraer_todas_las_fuentes():
     crear_tabla()
     todos_articulos = []
@@ -223,7 +225,15 @@ def extraer_todas_las_fuentes():
     guardar_en_db(todos_articulos)
     logging.info(f"Total guardados: {len(todos_articulos)} noticias sobre Bolivia")
 
-# Punto de entrada: Ejecuta inmediatamente y termina
+# Programar ejecución diaria a las 08:00 -04 (12:00 UTC)
+schedule.every().day.at("12:00").do(extraer_todas_las_fuentes)
+
+# Ejecutar el scheduler en un loop continuo
+def main():
+    logging.info("Iniciando agregador de noticias bolivianas (ejecución continua)...")
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
 if __name__ == "__main__":
-    logging.info("Ejecutando agregador de noticias bolivianas...")
-    extraer_todas_las_fuentes()
+    main()
